@@ -28,10 +28,21 @@ class ZephyrChatEngine:
     and generates responses based on those comments.
     """
 
-    def __init__(self, data_path="data/sentiment_results.json"):
+    def __init__(self, data_path=None):
         """
         Initialize the chat engine.
         """
+         # Dynamically resolve the correct path if not given
+        if data_path is None:
+            data_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "data", "sentiment_results.json")
+            )
+
+        print(f"🔍 Looking for sentiment_results.json at: {data_path}")
+
+        # instantiate the embedding model from embedding_model.py
+        self.embedding_model = EmbeddingModel()
+        self.index = None
 
         # instantiate the embedding model from embedding_model.py
         self.embedding_model = EmbeddingModel()

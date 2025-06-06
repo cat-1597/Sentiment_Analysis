@@ -10,7 +10,7 @@ This sentiment analyzer uses better prompt engineering:
 These improvements help the model correctly classify posts about products where
 destructive features (explosions, crashes, etc.) are actually positive attributes.
 """
-
+import os
 import requests
 import json
 import time
@@ -27,7 +27,9 @@ def create_sentiment_prompt(text, product):
     - Anvil Drop Kit: built to deploy heavy objects onto targets
     - Bird Seed: formulated to attract birds
     
-    Classify the sentiment as POSITIVE, NEGATIVE, or NEUTRAL, returning the classification in all uppercase letters.
+    Classify the sentiment as POSITIVE, NEGATIVE, or NEUTRAL returning the classification in all uppercase letters.
+    Respond ONLY with one of these three words in all caps.
+    Do not explain your answer.
     
     Examples:
     "Love these Zephyr Rocket Skates!" -> POSITIVE
@@ -40,7 +42,7 @@ def create_sentiment_prompt(text, product):
     
     Post: "{text}"
     Sentiment:
-    """
+    """.strip()
 
 
 def analyze_sentiment(text, product):
@@ -53,9 +55,15 @@ def analyze_sentiment(text, product):
         )
         response.raise_for_status()
         result = response.json()
-        sentiment = result["response"].strip()
+
+        # Safely extract the first word only
+        response_text = result.get("response", "").strip()
+        first_word = response_text.split()[0].upper().replace("**", "")
+
         sentiment_map = {"POSITIVE": 1, "NEUTRAL": 0, "NEGATIVE": -1}
-        return {"label": sentiment, "score": sentiment_map.get(sentiment, 0)}
+        score = sentiment_map.get(first_word, 0)
+        label = first_word if first_word in sentiment_map else "UNKNOWN"
+        return {"label": label, "score": score}
     except Exception as e:
         print(f"Error: {e}")
         return {"label": "ERROR", "score": 0}
@@ -79,6 +87,11 @@ def process_batch(posts, batch_size=5):
 def main():
     print("Starting Zephyr Sentiment Analysis with Gemma 3 4B...")
     results = process_batch(SOCIAL_MEDIA_POSTS)
+
+    # Save to standard location
+    output_path = os.path.join("data", "sentiment_results.json")
+    os.makedirs("data", exist_ok=True)  
+
     with open("sentiment_results.json", "w") as f:
         json.dump(results, f, indent=4)
     print(f"Processed {len(results)} posts. Results saved to sentiment_results.json")
